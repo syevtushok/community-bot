@@ -1,7 +1,8 @@
-package org.esadev.leetcodersbot;
+package org.esadev.leetcodersbot.scheduler;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.esadev.leetcodersbot.bot.LeetcodersFriendBot;
 import org.esadev.leetcodersbot.entity.OnlineCoffeeEntity;
 import org.esadev.leetcodersbot.entity.UserEntity;
 import org.esadev.leetcodersbot.props.BotProps;
