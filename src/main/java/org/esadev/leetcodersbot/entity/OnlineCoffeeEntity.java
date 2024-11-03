@@ -22,6 +22,7 @@ public class OnlineCoffeeEntity {
 	private LocalDate date;
 	private Boolean isActive;
 	private String coffeeName;
+	private Integer messageId;
 	@ManyToMany
 	@JoinTable
 	private List<UserEntity> users;

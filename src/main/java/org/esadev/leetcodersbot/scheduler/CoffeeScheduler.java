@@ -10,7 +10,10 @@ import org.esadev.leetcodersbot.repository.OnlineCoffeeRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.telegram.telegrambots.meta.api.methods.pinnedmessages.PinChatMessage;
+import org.telegram.telegrambots.meta.api.methods.pinnedmessages.UnpinChatMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -51,9 +54,15 @@ public class CoffeeScheduler {
 		entity.setDate(LocalDate.now());
 		entity.setIsActive(true);
 		entity.setCoffeeName(participateCallback);
+
+		Message sentMessage = leetcodersFriendBot.getTelegramClient().execute(sendMessage);
+		entity.setMessageId(sentMessage.getMessageId());
 		onlineCoffeeRepository.save(entity);
 
-		leetcodersFriendBot.getTelegramClient().execute(sendMessage);
+		leetcodersFriendBot.getTelegramClient().execute(PinChatMessage.builder()
+				.messageId(sentMessage.getMessageId())
+				.chatId(sentMessage.getChatId())
+				.build());
 	}
 
 	@Scheduled(cron = "0 0 22 * * TUE")
@@ -63,6 +72,10 @@ public class CoffeeScheduler {
 
 		if (lastActiveOnlineCoffee.isPresent() && !lastActiveOnlineCoffee.get().getUsers().isEmpty()) {
 			OnlineCoffeeEntity onlineCoffeeEntity = lastActiveOnlineCoffee.get();
+			leetcodersFriendBot.getTelegramClient().execute(UnpinChatMessage.builder()
+					.chatId(botProps.chatId())
+					.messageId(onlineCoffeeEntity.getMessageId())
+					.build());
 			List<UserEntity> users = onlineCoffeeEntity.getUsers();
 			Collections.shuffle(users);
 
