@@ -1,12 +1,14 @@
 package org.esadev.leetcodersbot.scheduler;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.esadev.leetcodersbot.bot.LeetcodersFriendBot;
 import org.esadev.leetcodersbot.entity.OnlineCoffeeEntity;
 import org.esadev.leetcodersbot.entity.UserEntity;
 import org.esadev.leetcodersbot.props.BotProps;
 import org.esadev.leetcodersbot.repository.OnlineCoffeeRepository;
+import org.esadev.leetcodersbot.service.PairingService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,16 +34,17 @@ import static org.esadev.leetcodersbot.utils.Const.ONLINE_COFFEE_RULES_CALLBACK;
 import static org.esadev.leetcodersbot.utils.Const.ONLINE_COFFEE_TEXT;
 import static org.esadev.leetcodersbot.utils.Const.RULES_BUTTON_TEXT;
 import static org.esadev.leetcodersbot.utils.Const.TO_PARTICIPATE_TEXT;
-import static org.esadev.leetcodersbot.utils.Utils.splitList;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class CoffeeScheduler {
 	private final OnlineCoffeeRepository onlineCoffeeRepository;
 	private final LeetcodersFriendBot leetcodersFriendBot;
 	private final BotProps botProps;
+	private final PairingService pairingService;
 
-	@Scheduled(cron = "0 0 8 * * TUE")
+	@Scheduled(cron = "0 0 6 * * TUE")
 	public void startCoffeePoll() throws TelegramApiException {
 		String participateCallback = ONLINE_COFFEE_PARTICIPATE_CALLBACK + LocalDate.now();
 		InlineKeyboardButton participateButton = createInlineKeyboardButton(TO_PARTICIPATE_TEXT, participateCallback);
@@ -65,25 +68,30 @@ public class CoffeeScheduler {
 				.build());
 	}
 
-	@Scheduled(cron = "0 0 22 * * TUE")
+	@Scheduled(cron = "0 0 20 * * TUE")
 	@Transactional
 	public void finishCoffeePoll() throws TelegramApiException {
 		Optional<OnlineCoffeeEntity> lastActiveOnlineCoffee = onlineCoffeeRepository.getFirstOnlineCoffeeEntityByIsActiveTrueOrderByDateDesc();
 
 		if (lastActiveOnlineCoffee.isPresent() && !lastActiveOnlineCoffee.get().getUsers().isEmpty()) {
 			OnlineCoffeeEntity onlineCoffeeEntity = lastActiveOnlineCoffee.get();
-			leetcodersFriendBot.getTelegramClient().execute(UnpinChatMessage.builder()
-					.chatId(botProps.chatId())
-					.messageId(onlineCoffeeEntity.getMessageId())
-					.build());
+			try {
+				leetcodersFriendBot.getTelegramClient().execute(UnpinChatMessage.builder()
+						.chatId(botProps.chatId())
+						.messageId(onlineCoffeeEntity.getMessageId())
+						.build());
+			} catch (Exception e) {
+				log.error("Error while unpinning message {}", onlineCoffeeEntity.getMessageId(), e);
+			}
+
+
 			List<UserEntity> users = onlineCoffeeEntity.getUsers();
 			Collections.shuffle(users);
-
-			List<List<UserEntity>> lists = splitList(users);
+			List<List<UserEntity>> pairs = pairingService.generateUniquePairs(users);
 			StringBuilder builder = new StringBuilder();
 			builder.append(HERE_ARE_OUR_PEOPLE);
-			lists.forEach(list -> {
-				list.forEach(user -> builder
+			pairs.forEach(pair -> {
+				pair.forEach(user -> builder
 						.append(StringUtils.trim(StringUtils.defaultString(user.getFirstName()) + " " + StringUtils.defaultString(user.getLastName())))
 						.append(" ")
 						.append(user.getUsername())
@@ -92,6 +100,7 @@ public class CoffeeScheduler {
 				builder.append(LINE_BREAK);
 			});
 			leetcodersFriendBot.getTelegramClient().execute(new SendMessage(botProps.chatId(), builder.toString()));
+			pairingService.savePairingHistory(pairs, onlineCoffeeEntity.getDate().atStartOfDay());
 		}
 		lastActiveOnlineCoffee.ifPresent(onlineCoffeeEntity -> onlineCoffeeEntity.setIsActive(Boolean.FALSE));
 
