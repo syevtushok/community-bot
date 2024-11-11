@@ -44,7 +44,7 @@ public class CoffeeScheduler {
 	private final BotProps botProps;
 	private final PairingService pairingService;
 
-	@Scheduled(cron = "0 0 6 * * TUE")
+	@Scheduled(cron = "0 0 5 * * TUE")
 	public void startCoffeePoll() throws TelegramApiException {
 		String participateCallback = ONLINE_COFFEE_PARTICIPATE_CALLBACK + LocalDate.now();
 		InlineKeyboardButton participateButton = createInlineKeyboardButton(TO_PARTICIPATE_TEXT, participateCallback);
