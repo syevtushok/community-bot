@@ -22,7 +22,7 @@ public class Utils {
 			if (input.size() == 1) {
 				result.add(new ArrayList<>(input.subList(0, 1)));
 			} else {
-				result.getLast().add(input.get(i));
+				result.get(result.size() - 1).add(input.get(i));
 			}
 		}
 

@@ -21,6 +21,7 @@ public class UserEntity {
 	private String username;
 	private String firstName;
 	private String lastName;
+	private String interlocutor;
 	@ManyToMany
 	@JoinTable
 	private List<OnlineCoffeeEntity> onlineCoffees;
@@ -37,5 +38,13 @@ public class UserEntity {
 	@Override
 	public int hashCode() {
 		return Objects.hashCode(id);
+	}
+
+	@Override
+	public String toString() {
+		return "{" +
+				"" + username + '\'' +
+				"" + interlocutor + '\'' +
+				'}';
 	}
 }

@@ -1,15 +1,33 @@
+#spring:
+#  jpa:
+#    hibernate:
+#      ddl-auto: none
+#    show-sql: true
+#    properties:
+#      hibernate:
+#        format_sql: true
+#  datasource:
+#    username: ${DB_LOGIN}
+#    password: ${DB_PASS}
+#    url: ${DB_URL}
+#bot:
+#  token: ${BOT_TOKEN}
+#  chat-id: ${BOT_CHAT_ID}
+
+
 spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   datasource:
-    username: ${DB_LOGIN}
-    password: ${DB_PASS}
-    url: ${DB_URL}
+    username: leetcodersbotapplication
+    password: 12345678
+    url: jdbc:postgresql://localhost:5432/leetcodersbotapplication
 bot:
   token: ${BOT_TOKEN}
-  chat-id: ${BOT_CHAT_ID}
+  chat-id: 395845916
