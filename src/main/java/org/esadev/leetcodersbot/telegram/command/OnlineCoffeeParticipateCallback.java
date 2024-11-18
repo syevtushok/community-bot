@@ -2,6 +2,7 @@ package org.esadev.leetcodersbot.telegram.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.esadev.leetcodersbot.creator.TelegramObjectCreator;
 import org.esadev.leetcodersbot.entity.OnlineCoffeeEntity;
 import org.esadev.leetcodersbot.entity.UserEntity;
@@ -93,7 +94,7 @@ public class OnlineCoffeeParticipateCallback implements TelegramCommand {
 
 	private String formatUserName(User fromUser) {
 		if (fromUser.getUserName() == null) {
-			return "%s_%s_%s".formatted(fromUser.getFirstName(), fromUser.getLastName(), fromUser.getId());
+			return "[%s](tg://user?id=%s)".formatted(fromUser.getFirstName() + StringUtils.defaultString(fromUser.getLastName()), fromUser.getId());
 		}
 		return AT_SIGN + fromUser.getUserName();
 	}

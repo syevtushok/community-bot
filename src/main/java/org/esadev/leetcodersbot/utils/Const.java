@@ -17,7 +17,7 @@ public class Const {
 	public static final String LINE_BREAK = "\n";
 	public static final String AT_SIGN = "@";
 	public static final String RULES_ARE_SIMPLE = """
-			Прийми участь в онлайн каві.\s
+			Візьми участь в онлайн каві.\s
 			В кінці дня бот автоматично обере пари людей, які підуть на каву.
 			Ваша задача - це домовитись за формат зустрічі (Наприклад zoom, 20 хвилин зустріч)""";
 
