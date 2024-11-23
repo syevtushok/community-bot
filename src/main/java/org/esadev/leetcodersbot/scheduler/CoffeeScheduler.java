@@ -51,6 +51,7 @@ public class CoffeeScheduler {
 		InlineKeyboardButton rulesButton = createInlineKeyboardButton(RULES_BUTTON_TEXT, ONLINE_COFFEE_RULES_CALLBACK);
 
 		SendMessage sendMessage = new SendMessage(botProps.chatId(), ONLINE_COFFEE_TEXT);
+		sendMessage.enableMarkdownV2(true);
 		sendMessage.setReplyMarkup(InlineKeyboardMarkup.builder().keyboardRow(createInlineKeyboardRow(List.of(participateButton, rulesButton))).build());
 
 		OnlineCoffeeEntity entity = new OnlineCoffeeEntity();
@@ -99,7 +100,9 @@ public class CoffeeScheduler {
 				);
 				builder.append(LINE_BREAK);
 			});
-			leetcodersFriendBot.getTelegramClient().execute(new SendMessage(botProps.chatId(), builder.toString()));
+			SendMessage sendMessage = new SendMessage(botProps.chatId(), builder.toString());
+			sendMessage.enableMarkdownV2(true);
+			leetcodersFriendBot.getTelegramClient().execute(sendMessage);
 			pairingService.savePairingHistory(pairs, onlineCoffeeEntity.getDate().atStartOfDay());
 		}
 		lastActiveOnlineCoffee.ifPresent(onlineCoffeeEntity -> onlineCoffeeEntity.setIsActive(Boolean.FALSE));

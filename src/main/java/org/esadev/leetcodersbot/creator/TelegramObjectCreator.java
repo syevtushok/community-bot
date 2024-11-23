@@ -3,6 +3,7 @@ package org.esadev.leetcodersbot.creator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -39,12 +40,14 @@ public class TelegramObjectCreator {
 				.messageId(messageId)
 				.text(text)
 				.chatId(chatId)
+				.parseMode(ParseMode.MARKDOWN)
 				.build();
 	}
 
 	public static SendMessage createSendMessage(Long chatId, String text) {
 		return SendMessage.builder()
 				.chatId(chatId)
+				.parseMode(ParseMode.MARKDOWN)
 				.text(text)
 				.build();
 	}

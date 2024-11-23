@@ -13,3 +13,8 @@ spring:
 bot:
   token: ${BOT_TOKEN}
   chat-id: ${BOT_CHAT_ID}
+telegram:
+  advanced:
+    chat-name: ${TELEGRAM_CHAT_NAME}
+    all-users-in-group-url: ${TELEGRAM_ALL_USERS_IN_GROUP_URL}
+    admin-id: ${TELEGRAM_ADMIN_ID}
