@@ -2,30 +2,30 @@ package org.esadev.leetcodersbot.utils;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.esadev.leetcodersbot.entity.UserEntity;
+import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
+
+import static org.esadev.leetcodersbot.utils.Const.AT_SIGN;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Utils {
-	public static List<List<UserEntity>> splitList(List<UserEntity> input) {
-		List<List<UserEntity>> result = new ArrayList<>();
-		int i = 0;
 
-		while (i < input.size() - 1) {
-			result.add(new ArrayList<>(input.subList(i, i + 2)));
-			i += 2;
+	public static List<String> splitText(String text, int maxLength) {
+		int length = text.length();
+
+		return IntStream
+				.iterate(0, i -> i < length, i -> i + maxLength).mapToObj(i -> text.substring(i, Math.min(length, i + maxLength)))
+				.toList();
+	}
+
+	public static String formatUserName(String firstName, String lastName, String userName, String id) {
+		if (userName == null) {
+			String fullName = StringUtils.defaultString(firstName) + StringUtils.defaultString(lastName);
+			String customName = fullName.trim().isEmpty() ? id : fullName.trim();
+			return ("[%s](tg://user?id=%s)").formatted(customName, id);
 		}
-
-		if (i < input.size()) {
-			if (input.size() == 1) {
-				result.add(new ArrayList<>(input.subList(0, 1)));
-			} else {
-				result.getLast().add(input.get(i));
-			}
-		}
-
-		return result;
+		return AT_SIGN + userName;
 	}
 }

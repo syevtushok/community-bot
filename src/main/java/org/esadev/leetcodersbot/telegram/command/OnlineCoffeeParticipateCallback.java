@@ -2,7 +2,6 @@ package org.esadev.leetcodersbot.telegram.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.StringUtils;
 import org.esadev.leetcodersbot.creator.TelegramObjectCreator;
 import org.esadev.leetcodersbot.entity.OnlineCoffeeEntity;
 import org.esadev.leetcodersbot.entity.UserEntity;
@@ -28,13 +27,13 @@ import static org.esadev.leetcodersbot.creator.TelegramObjectCreator.createAnswe
 import static org.esadev.leetcodersbot.creator.TelegramObjectCreator.createEditMessageText;
 import static org.esadev.leetcodersbot.creator.TelegramObjectCreator.createInlineKeyboardButton;
 import static org.esadev.leetcodersbot.utils.Const.APPROVE_RESPONSE_MESSAGE;
-import static org.esadev.leetcodersbot.utils.Const.AT_SIGN;
 import static org.esadev.leetcodersbot.utils.Const.DECLINE_RESPONSE_MESSAGE;
 import static org.esadev.leetcodersbot.utils.Const.OLD_COFFEE_POLL_RESPONSE;
 import static org.esadev.leetcodersbot.utils.Const.ONLINE_COFFEE_PARTICIPATE_CALLBACK;
 import static org.esadev.leetcodersbot.utils.Const.ONLINE_COFFEE_RULES_CALLBACK;
 import static org.esadev.leetcodersbot.utils.Const.RULES_BUTTON_TEXT;
 import static org.esadev.leetcodersbot.utils.Const.TO_PARTICIPATE_TEXT;
+import static org.esadev.leetcodersbot.utils.Utils.formatUserName;
 
 @RequiredArgsConstructor
 @Component
@@ -65,10 +64,10 @@ public class OnlineCoffeeParticipateCallback implements TelegramCommand {
 					Optional<UserEntity> first = onlineCoffeeEntity.getUsers().stream().filter(user -> user.getId().equals(fromUser.getId())).findFirst();
 					if (first.isPresent()) {
 						responseMessage = DECLINE_RESPONSE_MESSAGE;
-						messageText = messageText.replace(formatUserName(fromUser), EMPTY);
+						messageText = messageText.replace(formatUserName(fromUser.getFirstName(), fromUser.getLastName(), fromUser.getUserName(), fromUser.getId().toString()), EMPTY);
 						onlineCoffeeEntity.getUsers().remove(first.get());
 					} else {
-						messageText = "%s\n%s".formatted(messageText, formatUserName(fromUser));
+						messageText = "%s\n%s".formatted(messageText, formatUserName(fromUser.getFirstName(), fromUser.getLastName(), fromUser.getUserName(), fromUser.getId().toString()));
 						responseMessage = APPROVE_RESPONSE_MESSAGE;
 						userRepository.findById(fromUser.getId()).ifPresentOrElse(user -> onlineCoffeeEntity.getUsers().add(user),
 								() -> {
@@ -76,7 +75,7 @@ public class OnlineCoffeeParticipateCallback implements TelegramCommand {
 									user.setId(fromUser.getId());
 									user.setFirstName(fromUser.getFirstName());
 									user.setLastName(fromUser.getLastName());
-									user.setUsername(formatUserName(fromUser));
+									user.setUsername(formatUserName(fromUser.getFirstName(), fromUser.getLastName(), fromUser.getUserName(), fromUser.getId().toString()));
 									user.setOnlineCoffees(List.of(onlineCoffeeEntity));
 									UserEntity save = userRepository.save(user);
 									onlineCoffeeEntity.getUsers().add(save);
@@ -92,13 +91,6 @@ public class OnlineCoffeeParticipateCallback implements TelegramCommand {
 		}
 	}
 
-	private String formatUserName(User fromUser) {
-		if (fromUser.getUserName() == null) {
-			return "[%s](tg://user?id=%s)".formatted(fromUser.getFirstName() + StringUtils.defaultString(fromUser.getLastName()), fromUser.getId());
-		}
-		return AT_SIGN + fromUser.getUserName();
-	}
-
 	private void answerForPoll(Update update, TelegramClient client, Message message, String messageText, String responseMessage) throws TelegramApiException {
 		InlineKeyboardButton participateButton = createInlineKeyboardButton(TO_PARTICIPATE_TEXT, ONLINE_COFFEE_PARTICIPATE_CALLBACK + LocalDate.now());
 		InlineKeyboardButton rulesButton = createInlineKeyboardButton(RULES_BUTTON_TEXT, ONLINE_COFFEE_RULES_CALLBACK);
@@ -107,6 +99,7 @@ public class OnlineCoffeeParticipateCallback implements TelegramCommand {
 				.builder()
 				.keyboardRow(TelegramObjectCreator.createInlineKeyboardRow(List.of(participateButton, rulesButton)))
 				.build());
+		editMessageText.enableMarkdown(true);
 		client.execute(editMessageText);
 		client.execute(createAnswerCallbackQuery(update.getCallbackQuery().getId(), responseMessage));
 	}
