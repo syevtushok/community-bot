@@ -84,9 +84,7 @@ public class UserImportScheduler {
 				updatedUserMessage.append("Id: ").append(actualUser.getUserId()).append(". Last name updated from ").append(existingUser.getLastName()).append(" to ").append(actualUser.getLastName()).append("\n");
 				existingUser.setLastName(actualUser.getLastName());
 			} else {
-				if (actualUser.getLogin() == null) {
-					actualUser.setLogin(formatUserName(actualUser.getFirstName(), actualUser.getLastName(), null, actualUser.getUserId().toString()));
-				}
+				actualUser.setLogin(formatUserName(actualUser.getFirstName(), actualUser.getLastName(), actualUser.getLogin(), actualUser.getUserId().toString()));
 				if (!actualUser.getLogin().equals(existingUser.getLogin())) {
 					updated = true;
 					updatedUserMessage.append("Id: ").append(actualUser.getUserId()).append(". Username updated from ").append(existingUser.getLogin()).append(" to ").append(actualUser.getLogin()).append("\n");
