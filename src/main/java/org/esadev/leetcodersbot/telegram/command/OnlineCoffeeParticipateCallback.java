@@ -2,11 +2,12 @@ package org.esadev.leetcodersbot.telegram.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.esadev.leetcodersbot.creator.TelegramObjectCreator;
 import org.esadev.leetcodersbot.entity.OnlineCoffeeEntity;
 import org.esadev.leetcodersbot.entity.UserEntity;
 import org.esadev.leetcodersbot.repository.OnlineCoffeeRepository;
-import org.esadev.leetcodersbot.repository.UserRepository;
+import org.esadev.leetcodersbot.service.UserService;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
@@ -22,24 +23,25 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.esadev.leetcodersbot.creator.TelegramObjectCreator.createAnswerCallbackQuery;
 import static org.esadev.leetcodersbot.creator.TelegramObjectCreator.createEditMessageText;
 import static org.esadev.leetcodersbot.creator.TelegramObjectCreator.createInlineKeyboardButton;
 import static org.esadev.leetcodersbot.utils.Const.APPROVE_RESPONSE_MESSAGE;
 import static org.esadev.leetcodersbot.utils.Const.DECLINE_RESPONSE_MESSAGE;
+import static org.esadev.leetcodersbot.utils.Const.LINE_BREAK;
 import static org.esadev.leetcodersbot.utils.Const.OLD_COFFEE_POLL_RESPONSE;
 import static org.esadev.leetcodersbot.utils.Const.ONLINE_COFFEE_PARTICIPATE_CALLBACK;
 import static org.esadev.leetcodersbot.utils.Const.ONLINE_COFFEE_RULES_CALLBACK;
+import static org.esadev.leetcodersbot.utils.Const.ONLINE_COFFEE_TEXT;
 import static org.esadev.leetcodersbot.utils.Const.RULES_BUTTON_TEXT;
 import static org.esadev.leetcodersbot.utils.Const.TO_PARTICIPATE_TEXT;
-import static org.esadev.leetcodersbot.utils.Utils.formatUserName;
 
+@Slf4j
 @RequiredArgsConstructor
 @Component
 public class OnlineCoffeeParticipateCallback implements TelegramCommand {
 	private final OnlineCoffeeRepository onlineCoffeeRepository;
-	private final UserRepository userRepository;
+	private final UserService userService;
 
 	@Override
 	public boolean supports(Update update) {
@@ -60,28 +62,20 @@ public class OnlineCoffeeParticipateCallback implements TelegramCommand {
 				if (update.getCallbackQuery().getMessage() instanceof Message message) {
 					User fromUser = update.getCallbackQuery().getFrom();
 					String responseMessage;
-					String messageText = message.getText();
+					StringBuilder messageText = new StringBuilder(ONLINE_COFFEE_TEXT).append(LINE_BREAK);
 					Optional<UserEntity> first = onlineCoffeeEntity.getUsers().stream().filter(user -> user.getId().equals(fromUser.getId())).findFirst();
 					if (first.isPresent()) {
+						log.info("User {} declined coffee", fromUser.getId());
 						responseMessage = DECLINE_RESPONSE_MESSAGE;
-						messageText = messageText.replace(formatUserName(fromUser.getFirstName(), fromUser.getLastName(), fromUser.getUserName(), fromUser.getId().toString()), EMPTY);
 						onlineCoffeeEntity.getUsers().remove(first.get());
+						onlineCoffeeEntity.getUsers().forEach(user -> messageText.append(user.getUsername()).append(LINE_BREAK));
 					} else {
-						messageText = "%s\n%s".formatted(messageText, formatUserName(fromUser.getFirstName(), fromUser.getLastName(), fromUser.getUserName(), fromUser.getId().toString()));
+						log.info("User {} agreed to coffee", fromUser.getId());
 						responseMessage = APPROVE_RESPONSE_MESSAGE;
-						userRepository.findById(fromUser.getId()).ifPresentOrElse(user -> onlineCoffeeEntity.getUsers().add(user),
-								() -> {
-									UserEntity user = new UserEntity();
-									user.setId(fromUser.getId());
-									user.setFirstName(fromUser.getFirstName());
-									user.setLastName(fromUser.getLastName());
-									user.setUsername(formatUserName(fromUser.getFirstName(), fromUser.getLastName(), fromUser.getUserName(), fromUser.getId().toString()));
-									user.setOnlineCoffees(List.of(onlineCoffeeEntity));
-									UserEntity save = userRepository.save(user);
-									onlineCoffeeEntity.getUsers().add(save);
-								});
+						userService.saveNewUser(fromUser, onlineCoffeeEntity);
+						onlineCoffeeEntity.getUsers().forEach(user -> messageText.append(user.getUsername()).append(LINE_BREAK));
 					}
-					answerForPoll(update, client, message, messageText, responseMessage);
+					answerForPoll(update, client, message, messageText.toString(), responseMessage);
 				} else {
 					client.execute(TelegramObjectCreator.createAnswerCallbackQuery(update.getCallbackQuery().getId(), OLD_COFFEE_POLL_RESPONSE));
 				}
@@ -90,6 +84,7 @@ public class OnlineCoffeeParticipateCallback implements TelegramCommand {
 			}
 		}
 	}
+
 
 	private void answerForPoll(Update update, TelegramClient client, Message message, String messageText, String responseMessage) throws TelegramApiException {
 		InlineKeyboardButton participateButton = createInlineKeyboardButton(TO_PARTICIPATE_TEXT, ONLINE_COFFEE_PARTICIPATE_CALLBACK + LocalDate.now());
