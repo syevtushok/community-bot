@@ -21,8 +21,8 @@ public class Utils {
 	}
 
 	public static String formatUserName(String firstName, String lastName, String userName, String id) {
-		if (userName == null) {
-			String fullName = StringUtils.defaultString(firstName) + StringUtils.defaultString(lastName);
+		if (StringUtils.isEmpty(userName)) {
+			String fullName = StringUtils.defaultString(firstName) + " " + StringUtils.defaultString(lastName);
 			String customName = fullName.trim().isEmpty() ? id : fullName.trim();
 			return ("[%s](tg://user?id=%s)").formatted(customName, id);
 		}

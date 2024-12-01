@@ -2,6 +2,7 @@ package org.esadev.leetcodersbot.scheduler;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.esadev.leetcodersbot.bot.LeetcodersFriendBot;
 import org.esadev.leetcodersbot.creator.TelegramObjectCreator;
 import org.esadev.leetcodersbot.model.AllByGroupRequest;
@@ -15,7 +16,11 @@ import org.springframework.web.client.RestClient;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.esadev.leetcodersbot.utils.Const.MAX_MESSAGE_LENGTH;
 import static org.esadev.leetcodersbot.utils.Utils.formatUserName;
@@ -28,6 +33,7 @@ public class UserImportScheduler {
 	private final TelegramAdvancedProps telegramAdvancedProps;
 	private final UserService userService;
 	private final LeetcodersFriendBot leetcodersFriendBot;
+	private final String specialCharsRegex = "[\\\\_*\\[\\]()~`><&#+\\-=|{}.!]";
 
 	private List<TelegramUser> filterUsers(List<TelegramUser> sourceUsers, List<TelegramUser> actualUserIds) {
 		return sourceUsers.stream()
@@ -53,12 +59,23 @@ public class UserImportScheduler {
 			return;
 		}
 
+		sanitizeUser(actualUsers);
+
 		List<TelegramUser> existingUsers = userService.getAllUsers();
 
 		handleDeleted(existingUsers, actualUsers, reportMessage);
 		handleNewUsers(actualUsers, existingUsers, reportMessage);
 		handleUpdatedUsers(reportMessage, actualUsers, existingUsers);
 		sendReport(reportMessage.toString());
+	}
+
+
+	private void sanitizeUser(List<TelegramUser> actualUsers) {
+		actualUsers.forEach(actualUser -> {
+			actualUser.setFirstName(StringUtils.defaultString(actualUser.getFirstName()).replaceAll(specialCharsRegex, "\\\\$0"));
+			actualUser.setLastName(StringUtils.defaultString(actualUser.getLastName()).replaceAll(specialCharsRegex, "\\\\$0"));
+			actualUser.setLogin(formatUserName(actualUser.getFirstName(), actualUser.getLastName(), StringUtils.defaultString(actualUser.getLogin()).replaceAll(specialCharsRegex, "\\\\$0"), actualUser.getUserId().toString()));
+		});
 	}
 
 	private void sendReport(String reportMessage) throws TelegramApiException {
@@ -72,32 +89,40 @@ public class UserImportScheduler {
 
 	private void handleUpdatedUsers(StringBuilder reportMessage, List<TelegramUser> actualUsers, List<TelegramUser> existingUsers) {
 		reportMessage.append("\n");
-		actualUsers.forEach(actualUser -> existingUsers.stream().filter(telegramUser -> telegramUser.getUserId().equals(actualUser.getUserId())).findFirst().ifPresent(existingUser -> {
-			StringBuilder updatedUserMessage = new StringBuilder();
-			boolean updated = false;
-			if (existingUser.getFirstName() != null && !existingUser.getFirstName().equals(actualUser.getFirstName())) {
-				updated = true;
-				updatedUserMessage.append("Id: ").append(actualUser.getUserId()).append(". First name updated from ").append(existingUser.getFirstName()).append(" to ").append(actualUser.getFirstName()).append("\n");
-				existingUser.setFirstName(actualUser.getFirstName());
-			} else if (existingUser.getLastName() != null && !existingUser.getLastName().equals(actualUser.getLastName())) {
-				updated = true;
-				updatedUserMessage.append("Id: ").append(actualUser.getUserId()).append(". Last name updated from ").append(existingUser.getLastName()).append(" to ").append(actualUser.getLastName()).append("\n");
-				existingUser.setLastName(actualUser.getLastName());
-			} else {
-				actualUser.setLogin(formatUserName(actualUser.getFirstName(), actualUser.getLastName(), actualUser.getLogin(), actualUser.getUserId().toString()));
-				if (!actualUser.getLogin().equals(existingUser.getLogin())) {
-					updated = true;
-					updatedUserMessage.append("Id: ").append(actualUser.getUserId()).append(". Username updated from ").append(existingUser.getLogin()).append(" to ").append(actualUser.getLogin()).append("\n");
-					existingUser.setLogin(actualUser.getLogin());
+		Map<Long, TelegramUser> existingUsersMap = existingUsers.stream().collect(Collectors.toMap(TelegramUser::getUserId, Function.identity()));
+
+		List<String> updatedMessages = new ArrayList<>();
+		for (TelegramUser actualUser : actualUsers) {
+			TelegramUser existingUser = existingUsersMap.get(actualUser.getUserId());
+			if (existingUser != null) {
+				StringBuilder updatedUserMessage = new StringBuilder();
+				boolean updated = false;
+
+				updated |= updateField("First name", existingUser.getFirstName(), actualUser.getFirstName(), updatedUserMessage, actualUser);
+				updated |= updateField("Last name", existingUser.getLastName(), actualUser.getLastName(), updatedUserMessage, actualUser);
+				updated |= updateField("Username", existingUser.getLogin(), actualUser.getLogin(), updatedUserMessage, actualUser);
+
+				if (updated) {
+					try {
+						userService.updateUser(actualUser);
+						updatedMessages.add(updatedUserMessage.toString());
+					} catch (Exception e) {
+						log.error("Failed to update user {}: {}", actualUser.getUserId(), e.getMessage(), e);
+					}
 				}
 			}
-			if (updated) {
-				userService.updateUser(existingUser);
-				log.info(updatedUserMessage.toString());
-			}
+		}
 
-			reportMessage.append(updatedUserMessage);
-		}));
+		updatedMessages.forEach(reportMessage::append);
+	}
+
+	private boolean updateField(String fieldName, String oldValue, String newValue, StringBuilder message, TelegramUser user) {
+		if (!StringUtils.equals(oldValue, newValue)) {
+			message.append("Id: ").append(user.getUserId()).append(". ").append(fieldName)
+					.append(" updated from ").append(oldValue).append(" to ").append(newValue).append("\n");
+			return true;
+		}
+		return false;
 	}
 
 	private void handleNewUsers(List<TelegramUser> actualUsers, List<TelegramUser> existingUsers, StringBuilder reportMessage) {
@@ -105,7 +130,7 @@ public class UserImportScheduler {
 		if (!newUsers.isEmpty()) {
 			reportMessage.append("New users: ").append(newUsers.size()).append("\n");
 			formatUsers(reportMessage, newUsers);
-			newUsers.forEach(userService::saveUser);
+			newUsers.forEach(userService::saveTelegramUser);
 		}
 	}
 
@@ -121,7 +146,6 @@ public class UserImportScheduler {
 	private void formatUsers(StringBuilder reportMessage, List<TelegramUser> telegramUsers) {
 		for (int i = 0; i < telegramUsers.size(); i++) {
 			TelegramUser telegramUser = telegramUsers.get(i);
-			telegramUser.setLogin(formatUserName(telegramUser.getFirstName(), telegramUser.getLastName(), telegramUser.getLogin(), telegramUser.getUserId().toString()));
 			reportMessage.append(i + 1)
 					.append(". ")
 					.append(telegramUser.getUserId())

@@ -8,8 +8,8 @@ public class Const {
 	public static final String DECLINE_RESPONSE_MESSAGE = "Ти відмовився від кави 😢";
 	public static final String APPROVE_RESPONSE_MESSAGE = "Тебе чекає кавуся ☕️";
 	public static final String OLD_COFFEE_POLL_RESPONSE = "Це опитування вже неактуальне ((";
-	public static final String ONLINE_COFFEE_TEXT = "Запрошую вас всіх приєднатись до онлайн кави!🧑‍💻☕️👩‍💻\nДавайте знайомитись!";
-	public static final String TO_PARTICIPATE_TEXT = "П'ю каву!";
+	public static final String ONLINE_COFFEE_TEXT = "Запрошую вас всіх приєднатись до онлайн кави🧑‍💻☕️👩‍💻\nДавайте знайомитись☺️";
+	public static final String TO_PARTICIPATE_TEXT = "П'ю каву з вами";
 	public static final String ONLINE_COFFEE_RULES_CALLBACK = "online_coffee_rules";
 	public static final String ONLINE_COFFEE_PARTICIPATE_CALLBACK = "online_coffee_participate_";
 	public static final String RULES_BUTTON_TEXT = "Правила";
